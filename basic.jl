@@ -12,6 +12,7 @@ begin
 	using GLM
 	using GraphPlot
 	using ParserCombinator.Parsers.DOT: nodes, edges, parse_dot, StringID
+    using Statistics
 end
 
 # ╔═╡ 1d7b6d76-8974-4480-942d-35e895ac0c69
@@ -19,8 +20,35 @@ end
 
 # ╔═╡ cb7406e4-ae75-4c99-b7d5-842055b52aee
 df = CSV.read("./data/sodium.csv", DataFrame)
+df = select!(df, Not(:Column1))   # drop index column
 
 # ╔═╡ 3c9d639a-dea3-40f5-bec0-be46ecf332e3
+begin
+    ols = lm(@formula(sbp ~ sodium + age + proteinuria), df)
+
+    xt = copy(df[:,Not(:sbp)])
+    xt₁ = copy(xt)
+    xt₁.sodium .= 1
+    xt₂ = copy(xt)
+    xt₂.sodium .= 0
+
+    ate_est = mean(predict(ols, xt₁) - predict(ols, xt₂))
+    println("ATE estimate: $ate_est")
+end
+
+
+begin
+    ols_causal = lm(@formula(sbp ~ sodium + age), df)
+
+    xt = copy(df[:,Not([:sbp, :proteinuria])])
+    xt₁ = copy(xt)
+    xt₁.sodium .= 1
+    xt₂ = copy(xt)
+    xt₂.sodium .= 0
+
+    causal_ate_est = mean(predict(ols_causal, xt₁) - predict(ols_causal, xt₂))
+    println("causal ATE estimate: $causal_ate_est")
+end
 
 
 # ╔═╡ 48203bec-8156-489a-b04d-9a613526c85e
