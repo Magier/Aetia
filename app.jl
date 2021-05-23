@@ -7,7 +7,6 @@ app = dash(external_stylesheets = ["https://codepen.io/chriddyp/pen/bWLwgP.css"]
 
 app.layout = html_div() do
     html_h1("Hello Dash"),
-    html_div("Dash.jl: Julia interface for Dash"),
         dcc_tabs(id="stage-tabs", value="tab-model") do
             dcc_tab(value="tab-model", label="Model") do
                 html_div("Model")
@@ -75,16 +74,21 @@ app.layout = html_div() do
 end
 
 
-callback!(app, Output("tab-content","children"), Input("stage-tabs", "value")) do tab
-    return tab
+callback!(app, Output("tab-content", "children"), Input("stage-tabs", "value")) do tab
     # extra = "-"
-    # if tab == "tab-model"
-    #     extra = "uber model"
-    # else
-
-    # end
+    if tab == "tab-model"
+        return show_model_creation_content()
+    else
+        # return tab
+        return html_h3("Tab $tab ... ")
+    end
     # # isnothing() && throw(PreventUpdate())
-    # return html_h3("Tab $tab ... $extr")
 end
 
-run_server(app, "0.0.0.0", 8080)
+
+function show_model_creation_content()
+    extra = "uber model"
+    return extra
+end
+
+run_server(app, "0.0.0.0", 8080, debug=true)
