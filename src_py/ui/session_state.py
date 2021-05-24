@@ -22,6 +22,10 @@ from typing import Any, Optional
 import streamlit.report_thread as ReportThread
 from streamlit.server.server import Server
 
+from streamlit.hashing import _CodeHasher
+from streamlit.report_thread import get_report_ctx
+from streamlit.server.server import Server
+
 
 def is_running_in_streamlit():
     thread = threading.current_thread()
@@ -54,6 +58,87 @@ class SessionState(object):
             return self.__dict__[key]
         else:
             return default
+
+
+class _SessionState:
+
+    def __init__(self, session, hash_funcs):
+        """Initialize SessionState instance."""
+        self.__dict__["_state"] = {
+            "data": {},
+            "hash": None,
+            "hasher": _CodeHasher(hash_funcs),
+            "is_rerun": False,
+            "session": session,
+        }
+
+    def __call__(self, **kwargs):
+        """Initialize state data once."""
+        for item, value in kwargs.items():
+            if item not in self._state["data"]:
+                self._state["data"][item] = value
+
+    def __getitem__(self, item):
+        """Return a saved state value, None if item is undefined."""
+        return self._state["data"].get(item, None)
+        
+    def __getattr__(self, item):
+        """Return a saved state value, None if item is undefined."""
+        return self._state["data"].get(item, None)
+
+    def __setitem__(self, item, value):
+        """Set state value."""
+        self._state["data"][item] = value
+
+    def __setattr__(self, item, value):
+        """Set state value."""
+        self._state["data"][item] = value
+    
+    def clear(self):
+        """Clear session state and request a rerun."""
+        self._state["data"].clear()
+        self._state["session"].request_rerun()
+    
+    def sync(self):
+        """Rerun the app with all state values up to date from the beginning to fix rollbacks."""
+
+        # Ensure to rerun only once to avoid infinite loops
+        # caused by a constantly changing state value at each run.
+        #
+        # Example: state.value += 1
+        print("syncing")
+        if self._state["is_rerun"]:
+            self._state["is_rerun"] = False
+        
+        elif self._state["hash"] is not None:
+            if self._state["hash"] != self._state["hasher"].to_bytes(self._state["data"], None):
+                self._state["is_rerun"] = True
+                self._state["session"].request_rerun()
+
+        self._state["hash"] = self._state["hasher"].to_bytes(self._state["data"], None)
+
+
+def _get_session():
+    session_id = get_report_ctx().session_id
+    session_info = Server.get_current()._get_session_info(session_id)
+
+    if session_info is None:
+        raise RuntimeError("Couldn't get your Streamlit Session object.")
+    
+    return session_info.session
+
+
+def _get_state(hash_funcs=None):
+    session = _get_session()
+
+    if not hasattr(session, "_custom_session_state"):
+        session._custom_session_state = _SessionState(session, hash_funcs)
+
+    return session._custom_session_state
+
+
+
+CLI_SESSION = None
     
 
 def get_state(**kwargs):
@@ -86,7 +171,10 @@ def get_state(**kwargs):
 
     is_cli = not is_running_in_streamlit()
     if is_cli:
-        return SessionState(**kwargs)
+        global CLI_SESSION
+        if CLI_SESSION is None:
+            CLI_SESSION = SessionState(**kwargs)
+        return CLI_SESSION
 
     current_server = Server.get_current()
     if hasattr(current_server, '_session_infos'):
@@ -97,16 +185,7 @@ def get_state(**kwargs):
 
     for session_info in session_infos:
         s = session_info.session
-        if (
-            # Streamlit < 0.54.0
-            (hasattr(s, '_main_dg') and s._main_dg == ctx.main_dg)
-            or
-            # Streamlit >= 0.54.0
-            (not hasattr(s, '_main_dg') and s.enqueue == ctx.enqueue)
-            or
-            # Streamlit >= 0.65.2
-            (not hasattr(s, '_main_dg') and s._uploaded_file_mgr == ctx.uploaded_file_mgr)
-        ):
+        if (not hasattr(s, '_main_dg') and s._uploaded_file_mgr == ctx.uploaded_file_mgr):
             this_session = s
 
     if this_session is None:

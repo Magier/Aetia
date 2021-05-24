@@ -6,5 +6,5 @@ from infer import ModelStage
 def show():
     st.header("identify")
     state = get_state()
-    if state.model.stage < ModelStage.CREATED:
+    if state.model.stage < ModelStage.DEFINED:
         st.error("Please create the model first!")
