@@ -4,6 +4,8 @@ import re
 from enum import Enum, IntEnum, IntFlag
 from typing import List, Optional, Set, Tuple, Union
 from dataclasses import dataclass
+from operator import ior
+from functools import reduce
 
 from altair.vegalite.v4.schema.core import Value
 
@@ -98,6 +100,9 @@ class CausalModel:
         else:
             return NodeAttribute.REGULAR
 
+    def add_node(self, node_id: str) -> None:
+        self.nodes.add(node_id)
+
     def update_node(self, node: str, attr: NodeAttribute) -> None:
         if attr == NodeAttribute.TREATMENT:
             self.treatment = node
@@ -112,7 +117,21 @@ class CausalModel:
             self.unobserved.add(node)
             return f"Unobeserved variables are now {self.unobserved}"
 
-        
+    def delete_node(self, node_id: str) -> None:
+        if self.treatment == node_id:
+            self.treatment = None
+        if self.outcome == node_id:
+            self.outcome = None
+        if node_id in self.adjusted:
+            self.adjusted.remove(node_id)
+        if node_id in self.unobserved:
+            self.unobserved.remove(node_id)
+        self.nodes.remove(node_id)
+        self.edges = {(s, t) for s, t in self.edges if s != node_id and t !=node_id }
+
+    def delete_edge(self, source:str, target: str) -> None:
+        self.edges.remove((source, target))
+
     def as_string(self) -> str:
         edges = [f"{s}[{str(self.get_node_attributes(s))}]->{t}[{str(self.get_node_attributes(t))}]" for s, t in list(self.edges)]
         return "\n".join(edges)
@@ -128,15 +147,13 @@ def normalize_node(node_name: str) -> Tuple[str, NodeAttribute]:
     match = re.search(r"(.*)\[(.*)\]", node_name)
     if match:
         node_name, attributes = match.groups()
-        for attr in attributes.split(","):
-            try:
-                a = NodeAttribute.parse(attr)
-                attrs |= a
-            except ValueError as exc:
-                print(f"Can't parse node attribute: '{attr}': {exc}")
+        try:
+            attrs = reduce(ior, [NodeAttribute.parse(a) for a in attributes.split(",") if a], NodeAttribute.REGULAR)
+        except ValueError as exc:
+            print(f"Can't parse node attributes: '{attributes}': {exc}")
     return node_name, attrs
 
-    
+
 def parse_model_string(input: Union[str, List[str]]) -> CausalModel:
     treatment = None
     outcome = None
@@ -145,7 +162,7 @@ def parse_model_string(input: Union[str, List[str]]) -> CausalModel:
     nodes = set()
     edges = set()
 
-    lines =  input.split("\n") if isinstance(input, str) else input
+    lines = input.split("\n") if isinstance(input, str) else input
     for line in lines:
         source, target, *_ = [n.strip() for n in line.split("->")] 
         if len(_) > 0:
@@ -170,10 +187,9 @@ def parse_model_string(input: Union[str, List[str]]) -> CausalModel:
                 unobserved.add(node)
             if node_attr == NodeAttribute.ADJUSTED:
                 adjusted.add(node)
-            
+
     model = CausalModel(nodes, edges, treatment, outcome, adjusted, unobserved)
     return model
-
 
 
 def edges_to_dot(edges: List[str]) -> str:
@@ -181,4 +197,3 @@ def edges_to_dot(edges: List[str]) -> str:
     return f"""digraph graphname {
         {edge_str}
     }"""
-

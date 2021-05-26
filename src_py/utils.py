@@ -1,10 +1,8 @@
-from numpy import union1d
 from infer import CausalModel
 from typing import Dict, List, Tuple, Optional
 
 
-
-def get_cytoscape_params_from_model(causal_model: CausalModel) -> Tuple:
+def get_cytoscape_params_from_model(causal_model: CausalModel) -> Tuple[List, List, Dict, Dict]:
     edge_list = list(causal_model.edges)  #edges_declaration_to_list(edges)
 
     node_classes = {}
@@ -22,20 +20,16 @@ def get_cytoscape_params_from_model(causal_model: CausalModel) -> Tuple:
 
 def get_cytoscape_params(
         edgelist: List[Tuple], nodes: Optional[List[str]] = None, node_classes: Optional[Dict]  = None
-):
+) -> Tuple[List, List, Dict, Dict]:
     edges = [
         {"data": {"id": f"{s}->{t}", "source": s, "target": t}} for s, t in edgelist
     ]
 
     node_iter = set(sum(edgelist, ())) if nodes is None else nodes
 
-    primary_color = "darkgray"
-    secondary_color = "lightgray"
-
-
     nodes = []
     for node_id in node_iter:
-        node = {"data": {"id": node_id}}
+        node = {"data": {"id": node_id, "label": node_id}}
         if node_classes is not None and node_id in node_classes:
             node["classes"] = node_classes.get(node_id, "")
         nodes.append(node)
@@ -43,55 +37,85 @@ def get_cytoscape_params(
     style = [
         {"selector": "core", "style": {"background": "blue"}},
         {
-            "selector": "node",
-            "style": {
-                "label": "data(id)",
-                "background-color": primary_color,
-                "font-size": "2em",
-                "color": "darkgreen",
-                "text-valign": "center",
-                "text-halign": "center",
-            },
-        },
-        {
             "selector": ".treatment",
             "style": {
                 "background-color": "green",
-                "color": primary_color,
             }
         },
         {
             "selector": ".outcome",
             "style": {
-                "background-color": "blue",
-                "color": primary_color,
+                "background-color": "SteelBlue",
             }
         },
         {
             "selector": ".unobserved",
             "style": {
-                "background-color": "transparent",
+                "background-opacity": "0",
                 "border-width": 2,
-                "border-color": primary_color,
+                "border-color": "darkgray",
                 "border-style": "dashed",
             }
         },
         {
-            "selector": "edge",
+            "selector": ":selected",
             "style": {
-                "curve-style": "bezier",
-                "target-arrow-shape": "triangle",
-                "width": 5,
-                # "line-color": "#ddd",
-                "background-fill": "linear-gradient(yellow, lightgray)",
-                "target-arrow-color": primary_color,
-            },
+                "border-color": "darkred",
+                "border-width": 2,
+            }
         },
     ]
 
-    layout = {"name": "breadthfirst", "directed": True, "circle": True}
-    # if for_jupyter:
-    #     elements = {"nodes": nodes, "edges": edges}
-    # else:
+    layout = {"name": 'dagre', "rankDir": "LR"}
+
+    context_menu = {
+        "node": {
+            "commands": [
+                {
+                    "content": "fa-pills",
+                    "type": "symbol",
+                    "event": "TREATMENT"
+                }, {
+                    "content": "fa-question",
+                    "type": "symbol",
+                    "event": "OUTCOME"
+                }, {
+                    "content": "fa-screwdriver",
+                    "type": "symbol",
+                    "event": "ADJUSTED"
+                }, {
+                    "content": "fa-eye-slash",
+                    "type": "symbol",
+                    "event": "UNOBSERVED"
+                }, {
+                    "content": "fa-trash-alt",
+                    "type": "symbol",
+                    "event": "DELETE_NODE",
+                    "fillColor": "red"
+
+                },
+            ]
+        },
+        "edge": {
+            "commands": [
+                {
+                    "content": "fa-trash-alt",
+                    "type": "symbol",
+                    "event": "REMOVE_EDGE"
+                }
+            ]
+        },
+        "core": {
+            "commands": [
+                {
+                    "content": "fa-plus",
+                    "type": "symbol",
+                    "event": "ADD_NODE"
+                }
+            ]
+
+        }
+    }
+
     elements = nodes + edges
-    return elements, style, layout
+    return elements, style, layout, context_menu

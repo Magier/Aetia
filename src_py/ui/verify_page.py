@@ -1,9 +1,9 @@
 import streamlit as st
-from ui.session_state import get_state
+from ui.session_state import SessionState, get_state
 from infer import ModelStage
 
 
-def show():
+def show(state: SessionState):
     st.header("Verify")
     state = get_state()
     if state.model.stage < ModelStage.ESTIMATED:
