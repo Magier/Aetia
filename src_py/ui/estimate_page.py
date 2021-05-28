@@ -42,5 +42,5 @@ def show(state: SessionState):
         st.error("Please prepare the statistical model by identifying it first!")
 
     if st.button("Generate data"):
-        df = generate_data()
+        df = generate_data(n=1000, seed=777, beta1=1.05, alpha1=0.5, alpha2=0.5)
         st.dataframe(df)
