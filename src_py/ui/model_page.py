@@ -3,40 +3,9 @@ from typing import Dict, List, Tuple
 from st_cytoscape_builder import st_cytoscape_builder
 
 import utils
-from ui.session_state import SessionState, get_state
-from infer import ModelStage, edges_to_dot
+from sample_dags import SAMPLE_DAGS
+from ui.session_state import SessionState
 from causal_graph import CausalGraph, NodeAttribute, parse_model_string
-
-SAMPLE_DAGS = {
-    "default": [
-        "age -> sodium",
-        "age -> sbp",
-        "w[unobserved] -> age",
-        "sodium[treatment] -> proteinuria",
-        "sodium -> mediator",
-        "mediator -> sbp",
-        "sbp[outcome] -> proteinuria"
-    ],
-    "Collider": [
-        "L -> A[treatment]",
-        "A -> Y[outcome]",
-        "L -> Y"
-    ],
-    "M-bias": [
-        "U₁[unobserved] -> Z",
-        "U₁[unobserved] -> Y[outcome]",
-        "U₂[unobserved] -> A[treatment]",
-        "U₂[unobserved] -> Z",
-        "A -> Y"
-    ],
-    "frontdoor": [
-        "A[treatment] -> M",
-        "M -> Y[outcome]",
-        "U[unobserved] -> A",
-        "U -> Y"
-    ],
-}
-# add more complex Shrier & Platt 2008: https://bmcmedresmethodol.biomedcentral.com/articles/10.1186/1471-2288-8-70
 
 
 def edges_declaration_to_list(edges: str) -> List[Tuple]:
@@ -111,7 +80,7 @@ def show(state: SessionState):
 
     elements, style, layout, ctx_menu = utils.get_cytoscape_params_from_model(model)
 
-    cy_event = st_cytoscape_builder(elements, style, layout, context_menu=ctx_menu)
+    cy_event = st_cytoscape_builder(elements, style, layout, context_menu=ctx_menu, height=1000)
     if cy_event is not None:
         if handle_cytoscape_event(cy_event, model):
             st.experimental_rerun()

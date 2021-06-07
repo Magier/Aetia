@@ -1,9 +1,8 @@
-from causal_graph import CausalGraph
 from typing import Dict, Iterable, List, Tuple, Optional
 import networkx as nx
 
 
-def get_cytoscape_params_from_model(causal_model: CausalGraph) -> Tuple[List, List, Dict, Dict]:
+def get_cytoscape_params_from_model(causal_model: "CausalGraph") -> Tuple[List, List, Dict, Dict]:
     # edge_list = list(causal_model.edges)
     cy_json = nx.readwrite.json_graph.cytoscape_data(causal_model._graph)
     style, layout, context_menu = get_cytoscape_params()

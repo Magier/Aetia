@@ -1,6 +1,6 @@
-import causal_graph
+import sample_dags
 import utils
-from src_py.causal_graph import parse_model_string
+from src_py.causal_graph import NodeAttribute, parse_model_string
 
 
 class Test_BlockedPath:
@@ -52,6 +52,20 @@ class Test_BlockedPath:
         path = utils.node_path_to_edge_path(["A", "U₂", "Z", "U₁", "Y"], model.graph)
         is_blocked = model.is_path_blocked(path, conditioning_set=None)
         assert is_blocked
+
+
+class Test_DSeparation:
+    def test_shries_platt_no_adjustment(self):
+        model = parse_model_string(sample_dags.SHRIER_PLATT_2008)
+        biasing_paths = model.get_biasing_paths()
+        assert len(biasing_paths) == 3
+
+    def test_shries_platt_coach_fitness(self):
+        model = parse_model_string(sample_dags.SHRIER_PLATT_2008)
+        model.update_node("Coach", NodeAttribute.ADJUSTED)
+        model.update_node("Fitness Level", NodeAttribute.ADJUSTED)
+        biasing_paths = model.get_biasing_paths(as_edge_list=True)
+        assert len(biasing_paths) == 0
 
 
 

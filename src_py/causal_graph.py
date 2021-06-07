@@ -7,6 +7,8 @@ from operator import ior
 from typing import List, Optional, Set, Tuple, Union
 import networkx as nx
 
+import utils
+
 
 class NodeAttribute(IntFlag):
     REGULAR = 0
@@ -175,11 +177,13 @@ class CausalGraph:
             paths = nx.all_simple_paths(self._graph, self.treatment, self.outcome)
         return list(paths)
 
-    def get_biasing_paths(self, as_edge_list) -> List[List[Tuple]]:
+    def get_biasing_paths(self, as_edge_list: bool = True) -> List[List[Tuple]]:
         if self.treatment is None or self.outcome is None:
             return []
-        backdoor_paths = self.get_backdoor_paths(self.treatment, self.outcome, as_edge_list)
+        backdoor_paths = self.get_backdoor_paths(self.treatment, self.outcome, as_edge_list=True)
         biasing_paths = [path for path in backdoor_paths if not self.is_path_blocked(path, self.adjusted)]
+        if not as_edge_list:
+            biasing_paths = [utils.edge_path_to_node_path(p) for p in biasing_paths]
         return biasing_paths
 
     def get_backdoor_paths(self, source: str, target: str, as_edge_list: bool = False):
@@ -203,7 +207,7 @@ class CausalGraph:
             backdoor_paths = backdoor_edge_paths
         return backdoor_paths
 
-    def is_path_blocked(self, path: List[Union[str, Tuple]], conditioning_set: Optional[Set] = None) -> bool:
+    def is_path_blocked(self, path: List[Tuple], conditioning_set: Optional[Set] = None) -> bool:
         # rule 1 (unconditional separation): is there no collider
         target_counts = Counter([target for src, target in path])
         path_nodes = set([node for edge in path for node in edge])
@@ -213,14 +217,15 @@ class CausalGraph:
 
         # rule 2 (blocking by conditioning): is a variable on the path conditioned on
         # only variables on the path are valid blockers
-        blocking_nodes = conditioning_set.intersection(path_nodes)
+        blocking_nodes = conditioning_set.union(colliders).intersection(path_nodes)
 
         # rule 3 (conditioning on colliders): paths blocked by colliders
         # which are conditioned on (or its descendants) are 'open'
         collider_descendants = {n: nx.descendants(self._graph, n) for n in colliders}
         descendants = reduce(set.union, collider_descendants.values(), set())
 
-        blocking_nodes = blocking_nodes.difference(colliders.union(descendants))
+        defused_colliders = colliders.union(descendants).intersection(conditioning_set)
+        blocking_nodes = blocking_nodes.difference(defused_colliders)
 
         return len(blocking_nodes) > 0
 
