@@ -135,6 +135,10 @@ class CausalGraph:
                 "adjusted": False,
                 "observed": True
             }}
+            if node in self.adjusted:
+                self.adjusted.remove(node)
+            if node in self.unobserved:
+                self.unobserved.remove(node)
 
         if new_node_attrs is not None:
             nx.set_node_attributes(self._graph, new_node_attrs)
@@ -174,8 +178,9 @@ class CausalGraph:
     def get_biasing_paths(self, as_edge_list) -> List[List[Tuple]]:
         if self.treatment is None or self.outcome is None:
             return []
-        bpaths = self.get_backdoor_paths(self.treatment, self.outcome, as_edge_list)
-        return bpaths
+        backdoor_paths = self.get_backdoor_paths(self.treatment, self.outcome, as_edge_list)
+        biasing_paths = [path for path in backdoor_paths if not self.is_path_blocked(path, self.adjusted)]
+        return biasing_paths
 
     def get_backdoor_paths(self, source: str, target: str, as_edge_list: bool = False):
         undirected_graph = self._graph.to_undirected()
@@ -198,12 +203,12 @@ class CausalGraph:
             backdoor_paths = backdoor_edge_paths
         return backdoor_paths
 
-    def is_path_blocked(self, path: List[Tuple], conditioning_set: Optional[Set] = None) -> bool:
+    def is_path_blocked(self, path: List[Union[str, Tuple]], conditioning_set: Optional[Set] = None) -> bool:
         # rule 1 (unconditional separation): is there no collider
         target_counts = Counter([target for src, target in path])
         path_nodes = set([node for edge in path for node in edge])
         colliders = {node for node, c in target_counts.items() if c > 1}
-        if conditioning_set is None:
+        if conditioning_set is None or len(conditioning_set) == 0:
             return len(colliders) > 0
 
         # rule 2 (blocking by conditioning): is a variable on the path conditioned on
@@ -213,7 +218,7 @@ class CausalGraph:
         # rule 3 (conditioning on colliders): paths blocked by colliders
         # which are conditioned on (or its descendants) are 'open'
         collider_descendants = {n: nx.descendants(self._graph, n) for n in colliders}
-        descendants = reduce(set.union, collider_descendants.values())
+        descendants = reduce(set.union, collider_descendants.values(), set())
 
         blocking_nodes = blocking_nodes.difference(colliders.union(descendants))
 
@@ -242,7 +247,13 @@ def parse_model_string(model_string: Union[str, List[str]]) -> CausalGraph:
 
     lines = model_string.split("\n") if isinstance(model_string, str) else model_string
     for line in lines:
-        source, target, *_ = [n.strip() for n in line.split("->")]
+        if "->" in line:
+            source, target, *_ = [n.strip() for n in line.split("->")]
+        elif "<-" in line:
+            target, source, *_ = [n.strip() for n in line.split("<-")]
+        else:
+            raise ValueError(f"No valid edge direction specified in '{line}'. Expecting either '->' or '<-'")
+
         if len(_) > 0:
             raise NotImplementedError("Parsing of more than one edge per line are not yet supported!")
 

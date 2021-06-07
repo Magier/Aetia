@@ -134,3 +134,30 @@ def get_cytoscape_params() -> Tuple[List, Dict, Dict]:
     }
 
     return style, layout, context_menu
+
+
+def edge_path_to_node_path(path: List[Tuple]) -> List[str]:
+    """
+    Convert a path of edges to a simple list of nodes (without direction information)
+    :param path: the path of edges which will be convert
+    :return: a path of nodes
+    """
+    if len(path) == 0:
+        return []
+
+    node_path = [path[0][0]]  # first node is the source of the path
+    # the remaining nodes are the destination
+    node_path += [e[1] for e in node_path[1:]]
+    return node_path
+
+
+def node_path_to_edge_path(path: List[str], graph: nx.DiGraph) -> List[Tuple]:
+    """
+    Convert a path of nodes to a list of edges (with direction information)
+    :param path: the path of nodes which will be convert and enriched with direction information
+    :param graph: a graph providing the information about the edge direction
+    :return: a path of edges
+    """
+    assert len(path) > 1
+    edge_path = [(s, t) if graph.has_edge(s, t) else (t, s) for s, t in zip(path, path[1:])]
+    return edge_path
