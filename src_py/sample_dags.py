@@ -29,7 +29,7 @@ SAMPLE_DAGS = {
         "sodium[treatment] -> proteinuria",
         "sodium -> mediator",
         "mediator -> sbp",
-        "sbp[outcome] -> proteinuria"
+        "sbp[outcome] -> proteinuria",
     ],
     "Collider": [
         "L -> A[treatment]",
@@ -49,6 +49,18 @@ SAMPLE_DAGS = {
         "U[unobserved] -> A",
         "U -> Y"
     ],
-    "Shrier&Platt, 2008": SHRIER_PLATT_2008
+    "Shrier&Platt, 2008": SHRIER_PLATT_2008,
+    "big_M": [
+        "z₅ -> y[outcome]",
+        "z₆ -> y",
+        "z₁ -> y",
+        "x[treatment] -> z₆",
+        "z₄ -> z₅",
+        "z₃ -> z₂",
+        "z₄ -> z₁",
+        "z₃ -> z₁",
+        "z₂ -> x",
+        "z₁ -> x"
+    ]
 }
 # add more complex Shrier & Platt 2008: https://bmcmedresmethodol.biomedcentral.com/articles/10.1186/1471-2288-8-70

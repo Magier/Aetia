@@ -7,6 +7,11 @@ def get_cytoscape_params_from_model(causal_model: "CausalGraph") -> Tuple[List, 
     cy_json = nx.readwrite.json_graph.cytoscape_data(causal_model._graph)
     style, layout, context_menu = get_cytoscape_params()
 
+    nodes = cy_json["elements"]["nodes"]
+    for n in nodes:
+        if "position" in n["data"]:
+            n["position"] = n["data"]["position"]
+
     return cy_json["elements"], style, layout, context_menu
 
 

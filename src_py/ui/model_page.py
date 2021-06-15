@@ -2,6 +2,7 @@ import streamlit as st
 from typing import Dict, List, Tuple
 from st_cytoscape_builder import st_cytoscape_builder
 
+import identify
 import utils
 from sample_dags import SAMPLE_DAGS
 from ui.session_state import SessionState
@@ -60,6 +61,10 @@ def handle_cytoscape_event(cy_event: Dict, model: CausalGraph) -> bool:
         if node_id != "":
             model.add_node(node_id)
             update_needed = True
+    elif event == "DRAG":
+        pos = cy_event["position"]
+        model.set_node_position(node=element_id, x=pos["x"], y=pos["y"])
+        update_needed = False
     else:
         raise NotImplementedError(f"Can't handle event for event {event}")
 
@@ -70,6 +75,7 @@ def handle_cytoscape_event(cy_event: Dict, model: CausalGraph) -> bool:
 
 
 def show(state: SessionState):
+    st.checkbox("toggle")
     sample_name = st.selectbox("Sample Model", list(SAMPLE_DAGS.keys()), index=0)
     if "model" not in state or st.button(f"Load {sample_name} model"):
         model = load_sample_model(sample_name)
@@ -78,9 +84,11 @@ def show(state: SessionState):
     else:
         model = state.model
 
-    elements, style, layout, ctx_menu = utils.get_cytoscape_params_from_model(model)
+    backdoor_check = identify.check_backdoor_criterion(model, model.treatment, model.outcome, model.adjusted)
+    st.write(f"all backdoor paths blocked: {backdoor_check}")
 
-    cy_event = st_cytoscape_builder(elements, style, layout, context_menu=ctx_menu, height=1000)
+    elements, style, layout, ctx_menu = utils.get_cytoscape_params_from_model(model)
+    cy_event = st_cytoscape_builder(elements, style, layout, context_menu=ctx_menu, height=800)
     if cy_event is not None:
         if handle_cytoscape_event(cy_event, model):
             st.experimental_rerun()

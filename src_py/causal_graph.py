@@ -4,7 +4,8 @@ from dataclasses import dataclass
 from enum import IntFlag
 from functools import reduce
 from operator import ior
-from typing import List, Optional, Set, Tuple, Union
+from typing import Dict, List, Optional, Set, Tuple, Union
+from functools import lru_cache
 import networkx as nx
 
 import utils
@@ -48,6 +49,7 @@ class CausalGraph:
     outcome: Optional[str] = None
     adjusted: Set[str] = None
     unobserved: Set[str] = None
+    # compounds: Dict[Set[str]] = None
     _graph: nx.DiGraph = None
 
     def __post_init__(self):
@@ -57,7 +59,7 @@ class CausalGraph:
         self._graph = nx.DiGraph()
 
         if self.nodes is not None:
-            self._graph.add_nodes_from(self.nodes, observed=True)
+            self._graph.add_nodes_from(self.nodes, observed=True, parent="all")
         if self.edges is not None:
             self._graph.add_edges_from(self.edges)
 
@@ -135,7 +137,7 @@ class CausalGraph:
                 "treatment": False,
                 "outcome": False,
                 "adjusted": False,
-                "observed": True
+                "observed": True,
             }}
             if node in self.adjusted:
                 self.adjusted.remove(node)
@@ -144,6 +146,10 @@ class CausalGraph:
 
         if new_node_attrs is not None:
             nx.set_node_attributes(self._graph, new_node_attrs)
+
+    def set_node_position(self, node: str, x, y) -> None:
+        node_attr = {"position": {"x": x, "y": y}}
+        nx.set_node_attributes(self._graph, {node: node_attr})
 
     def delete_node(self, node_id: str) -> None:
         if self.treatment == node_id:
@@ -229,6 +235,10 @@ class CausalGraph:
 
         return len(blocking_nodes) > 0
 
+    @lru_cache
+    def get_post_treatment_nodes(self):
+        return nx.descendants(self._graph, self.treatment)
+
 
 def normalize_node(node_name: str) -> Tuple[str, NodeAttribute]:
     attrs = NodeAttribute.REGULAR
@@ -249,13 +259,18 @@ def parse_model_string(model_string: Union[str, List[str]]) -> CausalGraph:
     unobserved = set()
     nodes = set()
     edges = set()
+    compounds = {}
 
     lines = model_string.split("\n") if isinstance(model_string, str) else model_string
     for line in lines:
+        is_compound = False
         if "->" in line:
             source, target, *_ = [n.strip() for n in line.split("->")]
         elif "<-" in line:
             target, source, *_ = [n.strip() for n in line.split("<-")]
+        elif "∈" in line:
+            source, target, *_ = [n.strip() for n in line.split("∈")]
+            is_compound = True
         else:
             raise ValueError(f"No valid edge direction specified in '{line}'. Expecting either '->' or '<-'")
 
@@ -265,7 +280,12 @@ def parse_model_string(model_string: Union[str, List[str]]) -> CausalGraph:
         source = normalize_node(source)
         target = normalize_node(target)
 
-        edges.add((source[0], target[0]))
+        if is_compound:
+            parent = compounds.get(target, set())
+            parent.add(source)
+            compounds[target] = parent
+        else:
+            edges.add((source[0], target[0]))
 
         for node, node_attr in [source, target]:
             nodes.add(node)
