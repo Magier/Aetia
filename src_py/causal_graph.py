@@ -23,13 +23,13 @@ class NodeAttribute(IntFlag):
         attr = attr.lower()
         if attr == "regular":
             return cls.REGULAR
-        elif attr == "treatment":
+        elif attr in ["treatment", "t"]:
             return cls.TREATMENT
-        elif attr == "outcome":
+        elif attr in ["outcome", "o"]:
             return cls.OUTCOME
-        elif attr == "adjusted":
+        elif attr in ["adjusted", "a"]:
             return cls.ADJUSTED
-        elif attr == "unobserved":
+        elif attr in ["unobserved", "u"]:
             return cls.UNOBSERVED
         else:
             raise ValueError(f"Can't parse '{attr}'")
@@ -235,9 +235,11 @@ class CausalGraph:
 
         return len(blocking_nodes) > 0
 
-    @lru_cache
     def get_post_treatment_nodes(self):
         return nx.descendants(self._graph, self.treatment)
+
+    def get_unobserved_nodes(self):
+        return self.unobserved
 
 
 def normalize_node(node_name: str) -> Tuple[str, NodeAttribute]:

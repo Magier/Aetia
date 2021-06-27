@@ -3,6 +3,7 @@ from ui import model_page, estimate_page, identify_page, verify_page
 from ui.session_state import get_state, _get_state
 
 # TODO first time use layout alg in st_dag_builder, for updates use previous coordinates
+# TODO use do calculus in general to identify causal effect
 # TODO identify minimal adjustment sets (like dagitty)
 # TODO show that p(y|do(x=1)) != p(y|x)
 # TODO implement simpson simulator
