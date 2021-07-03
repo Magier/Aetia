@@ -1,5 +1,6 @@
 from typing import List, Optional, Set
 from itertools import combinations
+import pandas as pd
 
 import numpy as np
 
@@ -82,6 +83,19 @@ def get_adjustment_sets(graph: CausalGraph, treatment: str = None, outcome: str 
     return valid_adjustment_sets
 
 
-def adjust_backdoor(graph: CausalGraph) -> CausalGraph:
+def adjust_backdoor(df: pd.DataFrame, graph: CausalGraph) -> CausalGraph:
+    """
+    Leverage the information of the causal structure to adjust backdoor paths.
+    :param df: the dataframe for which the causal effect will be adusted.
+    :param graph:
+    :return:
+    """
     # P(Y|do(X)) = \sum_z P(Y|X, Z=z)P(Z=z)
-    pass
+    z = graph.adjusted
+    y = graph.outcome
+    x = graph.treatment
+
+    # from Paul Hühnermunds course:   ... for binary values
+    # mean(y[x==1 & z==1] * mean(z==1) + mean(y[x==1 & z==0])*mean(z==0)
+    s_adj = df[df[x]].groupby(list(z))[y].agg("mean")
+    return s_adj.sum()

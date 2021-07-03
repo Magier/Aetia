@@ -4,7 +4,7 @@ from dataclasses import dataclass
 from enum import IntFlag
 from functools import reduce
 from operator import ior
-from typing import Dict, List, Optional, Set, Tuple, Union
+from typing import Any, Dict, List, Optional, Set, Tuple, Union
 from functools import lru_cache
 import networkx as nx
 
@@ -32,13 +32,22 @@ class NodeAttribute(IntFlag):
         elif attr in ["unobserved", "u"]:
             return cls.UNOBSERVED
         else:
-            raise ValueError(f"Can't parse '{attr}'")
+            print(f"Can't parse node attribute: '{attr}'")
+            # raise ValueError(f"Can't parse '{attr}'")
+            return cls.REGULAR
 
     def __str__(self) -> str:
         if self == NodeAttribute.REGULAR:
             return ""
         else:
             return self.name.lower()
+
+
+@dataclass
+class Node:
+    name: str
+    attribute: NodeAttribute = NodeAttribute.REGULAR
+    meta: Optional[Any] = None
 
 
 @dataclass
@@ -254,6 +263,18 @@ def normalize_node(node_name: str) -> Tuple[str, NodeAttribute]:
     return node_name, attrs
 
 
+def parse_edges(lines: Union[List[str], str], sep: str = ";") -> List[Tuple[Node, Node]]:
+    if isinstance(lines, List):
+        lines = sep.join(lines)  # multiple edges are split by ';' - if list is provided join them with the same separator, so there is no difference, if multiple edges are defined per line
+
+    edges = []
+    for line in lines.split(';'):
+        if "->" in line:
+            source, target, *_ = [n.strip() for n in line.split("->")]
+            edges.append((source, target))
+    return edges
+
+
 def parse_model_string(model_string: Union[str, List[str]]) -> CausalGraph:
     treatment = None
     outcome = None
@@ -270,12 +291,14 @@ def parse_model_string(model_string: Union[str, List[str]]) -> CausalGraph:
             source, target, *_ = [n.strip() for n in line.split("->")]
         elif "<-" in line:
             target, source, *_ = [n.strip() for n in line.split("<-")]
+        elif "--" in line:
+            target, source, *_ = [n.strip() for n in line.split("--")]  # unobserved confounding
+            # TODO
         elif "∈" in line:
             source, target, *_ = [n.strip() for n in line.split("∈")]
             is_compound = True
         else:
             raise ValueError(f"No valid edge direction specified in '{line}'. Expecting either '->' or '<-'")
-
         if len(_) > 0:
             raise NotImplementedError("Parsing of more than one edge per line are not yet supported!")
 
@@ -308,3 +331,7 @@ def parse_model_string(model_string: Union[str, List[str]]) -> CausalGraph:
 
     model = CausalGraph(nodes, edges, treatment, outcome, adjusted, unobserved)
     return model
+
+
+def get_query_from_graph(graph: CausalGraph, cause: str, effect: str) -> str:
+    return f"P({effect}|do({cause}))"

@@ -22,16 +22,17 @@ SHRIER_PLATT_2008 = [
 
 
 SAMPLE_DAGS = {
-    "default": [
+    "ColliderApp": [
         "age -> sodium",
         "age -> sbp",
-        "w[unobserved] -> age",
+        # "w[unobserved] -> age",
         "sodium[treatment] -> proteinuria",
-        "sodium -> mediator",
-        "mediator -> sbp",
+        "sodium -> sbp",
+        # "sodium -> mediator",
+        # "mediator -> sbp",
         "sbp[outcome] -> proteinuria",
     ],
-    "Collider": [
+    "Confounder": [
         "Z -> X[treatment]",
         "X -> Y[outcome]",
         "Z -> Y"
@@ -67,6 +68,36 @@ SAMPLE_DAGS = {
         "Z₃ -> Z₁",
         "Z₂ -> X",
         "Z₁ -> X"
+    ],
+    "College Wage Premium": [    # from Lecture 16. Do-Calculus Course "Causal DS with DAG by Paul Hühnermund
+        "C[T, name=College Degree] -> Y[O, name=Earnings]",
+        "C -> W[name=Occupation]",
+        "W -> H[name=Work-related Health]",
+        "W -> Y",
+        "H -> Y",
+        "E[name=other socio-economic factors] -> C",
+        "E -> Y",
+        "U1[U] -> C",
+        "U1 -> E",
+        "U2 -> W",
+        "U2 -> Y",
+    ],
+    "Bareinboim's Napkin": [  # from Book of Why, ch.7, p.240, fig.7.5
+        "W -> Z",
+        "Z -> X[T]",
+        "X -> Y[O]",
+        "U1[U] -> W",
+        "U1[U] -> Y",
+        "U2[U] -> W",
+        "U2[U] -> X",
+    ],
+    "Wermuth&Cox Sequential Treatment, 2005": [   # from Book of Why, ch.7, p.241, fig.7.6
+        "X[T, name=Treatment 1] -> W[name=Intermediate outcome]",
+        "X -> Y[O]",
+        "W -> Z[T, name=Treatment 2]",
+        "Z -> Y",
+        "U[U, name=Unobserved health status] -> W",
+        "U -> Y"
     ]
 }
 # add more complex Shrier & Platt 2008: https://bmcmedresmethodol.biomedcentral.com/articles/10.1186/1471-2288-8-70

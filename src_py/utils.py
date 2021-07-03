@@ -1,5 +1,8 @@
-from typing import Dict, Iterable, List, Tuple, Optional
+import random
+from typing import Any, Dict, Iterable, List, Set, Tuple, Optional
 import networkx as nx
+import numpy as np
+import pandas as pd
 
 
 def get_cytoscape_params_from_model(causal_model: "CausalGraph") -> Tuple[List, List, Dict, Dict]:
@@ -165,3 +168,59 @@ def node_path_to_edge_path(path: List[str], graph: nx.DiGraph) -> List[Tuple]:
     assert len(path) > 1
     edge_path = [(s, t) if graph.has_edge(s, t) else (t, s) for s, t in zip(path, path[1:])]
     return edge_path
+
+
+def generate_colliderapp_data(n, seed, beta1, alpha1, alpha2) -> pd.DataFrame:
+    """
+
+    Parameters
+    ----------
+    n
+    seed
+    beta1
+    alpha1
+    alpha2
+
+    Returns
+    -------
+
+    """
+    # example from collider app: https://watzilei.com/shiny/collider/
+    random.seed(seed)
+    age_years = np.random.normal(65, 5, n)
+    sodium_gr = age_years / 18 + np.random.normal(size=n)
+    sbp = beta1 * sodium_gr + 2. * age_years + np.random.normal(size=n)
+    proteinuria = alpha1 * sodium_gr + alpha2 * sbp + np.random.normal(size=n)
+    return pd.DataFrame({
+        "sbp": sbp,
+        "sodium": sodium_gr,
+        "age": age_years,
+        "proteinuria": proteinuria
+    })
+
+
+def generate_confounder_data(n: int, seed: int = 0, ) -> Tuple[pd.DataFrame, float]:
+    e_x = np.random.normal(size=n)
+    e_y = np.random.normal(size=n)
+    e_z = np.random.normal(size=n)
+
+    z = e_z > 0
+    x = z + e_x > 0.5
+    y = (x + z + e_y) > 2
+
+    y_dox = (1 + z + e_x) > 2
+
+    df = pd.DataFrame({
+        "X": x,
+        "Y": y,
+        "Z": z
+    })
+
+    return df, float(np.mean(y_dox))
+
+
+def generate_data(n, nodes: Dict[str, Tuple[int, float]], seed: int=0) -> pd.DataFrame:
+    if seed != 0:
+        random.seed(seed)
+
+    raise NotImplementedError

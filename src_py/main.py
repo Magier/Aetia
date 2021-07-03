@@ -5,6 +5,7 @@ from ui.session_state import get_state, _get_state
 # TODO first time use layout alg in st_dag_builder, for updates use previous coordinates
 # TODO use do calculus in general to identify causal effect
 # TODO identify minimal adjustment sets (like dagitty)
+#  done for backdoor paths
 # TODO show that p(y|do(x=1)) != p(y|x)
 # TODO implement simpson simulator
 # simpson.simulator <- function(N,s,ce){
@@ -40,6 +41,29 @@ from ui.session_state import get_state, _get_state
 #  - ??
 
 
+# TODO features from Causal Fusion
+# - Confounding Analysis
+#   - Admissible Set
+#   - Admissibility Test
+#   - Instrumental Variables
+#   - IV Admissibility test
+
+# - Path Analysis
+#   - d-separation
+#   - is set of <nodes> independent of <nodes> conditional on <nodes>?
+#   - Causal Paths
+#   - Confounding Paths
+#   - Biasing Paths
+
+# - Do-Calculus Analysis
+#   - Do-inspector
+#   - Do-Seperation
+
+# - Testable implications
+#   - Conditional Independencies
+#   - Verma Contraints
+
+
 PAGES = {
     "Model": model_page,
     "Identify": identify_page,
@@ -49,16 +73,16 @@ PAGES = {
 
 
 def main():
-    state = get_state()
+    # state = get_state()
 
-    if "model" not in state:
+    # if "model" not in state:
     #     st.write(f"Model stage: {state.model.stage}")
     # else:
-        st.write("No model created")
-        st.write("initializing model")
+    #     st.write("No model created")
+    #     st.write("initializing model")
 
     sel_page = st.sidebar.radio("Navigation", list(PAGES))
-    PAGES[sel_page].show(state)
+    PAGES[sel_page].show()
 
     # state.sync()
 

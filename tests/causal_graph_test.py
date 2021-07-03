@@ -1,6 +1,41 @@
 import sample_dags
 import utils
-from src_py.causal_graph import NodeAttribute, parse_model_string
+from src_py.causal_graph import NodeAttribute, parse_model_string, parse_edges, get_query_from_graph
+
+
+class TestParsingOfEdges:
+    def test_parse_simple_edge(self):
+        edges = parse_edges("a->b")
+        assert len(edges) == 1
+        src, dst = edges[0]
+        assert src == 'a'
+        assert dst == 'b'
+
+    def test_parse_edge_with_attributes(self):
+        # attributes are kept with the node and are not further pared
+        edges = parse_edges("a[T]->b[O]")
+        assert len(edges) == 1
+        src, dst = edges[0]
+        assert src == 'a[T]'
+        assert dst == 'b[O]'
+
+    def test_parse_edge_with_meta_attribute(self):
+        assert False
+
+    def test_parse_single_edges_per_line(self):
+        assert False
+
+    def test_parse_multiple_edges_per_line(self):
+        assert False
+
+    def test_parse_edge_with_unobserved_confounding(self):
+        assert False
+
+    def test_parse_edge_inverse_direction(self):
+        assert False
+
+    def test_parse_edge_chain(self):
+        assert False
 
 
 class Test_BlockedPath:
@@ -68,4 +103,12 @@ class Test_DSeparation:
         assert len(biasing_paths) == 0
 
 
-
+class TestQueryFromCausalGraph:
+    def test_simple_collider(self):
+        graph = parse_model_string([
+            "X -> Y",
+            "Z -> X",
+            "Z -> Y"
+        ])
+        query = get_query_from_graph(graph, 'X', 'Y')
+        assert query == "P(Y|do(X))"

@@ -1,6 +1,7 @@
-from src_py.identify.backdoor import get_adjustment_sets, check_backdoor_criterion
-from src_py.causal_graph import parse_model_string
+from src_py.identify.backdoor import get_adjustment_sets, check_backdoor_criterion, adjust_backdoor
+from src_py.causal_graph import NodeAttribute, parse_model_string
 from src_py.sample_dags import SAMPLE_DAGS
+from src_py.utils import generate_colliderapp_data, generate_confounder_data
 
 
 class TestFrontdoorCriterionCheck:
@@ -49,3 +50,34 @@ class TestBackdoorAdjustmentSetIdentification:
         adj_sets = get_adjustment_sets(model)
         # front door can't be identified using backdoor adjustment
         assert len(adj_sets) == 0
+
+    def test_eco(self):
+        model_str = SAMPLE_DAGS["College Wage Premium"]
+        model = parse_model_string(model_str)
+        adj_sets = get_adjustment_sets(model)
+        assert len(adj_sets) == 1
+        assert adj_sets[0] == {'E'}
+
+
+class TestBackdoorAdjustment:
+    def test_collider_app_example(self):
+        model_str = SAMPLE_DAGS["ColliderApp"]
+        model = parse_model_string(model_str)
+        model.update_node("age", NodeAttribute.ADJUSTED)
+
+        df = generate_colliderapp_data(n=1000, seed=777, beta1=1.05, alpha1=0.5, alpha2=0.5)
+        res = adjust_backdoor(df, model)
+        a = 55
+        assert False
+
+    def test_canonical_collider(self):
+        model_str = SAMPLE_DAGS["Confounder"]
+        model = parse_model_string(model_str)
+        model.update_node("Z", NodeAttribute.ADJUSTED)
+
+        df, true_effect = generate_confounder_data(n=10000)
+        res = adjust_backdoor(df, model)
+
+        a = 5
+
+        assert False

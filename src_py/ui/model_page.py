@@ -5,7 +5,6 @@ from st_cytoscape_builder import st_cytoscape_builder
 import identify
 import utils
 from sample_dags import SAMPLE_DAGS
-from ui.session_state import SessionState
 from causal_graph import CausalGraph, NodeAttribute, parse_model_string
 
 
@@ -74,17 +73,17 @@ def handle_cytoscape_event(cy_event: Dict, model: CausalGraph) -> bool:
     return update_needed
 
 
-def show(state: SessionState):
+def show():
     st.checkbox("toggle")
     sample_name = st.selectbox("Sample Model", list(SAMPLE_DAGS.keys()), index=0)
-    if "model" not in state or st.button(f"Load {sample_name} model"):
+    if "model" not in st.session_state or st.button(f"Load {sample_name} model"):
         model = load_sample_model(sample_name)
         st.write(model)
-        state.model = model
+        st.session_state.model = model
     else:
-        model = state.model
+        model = st.session_state.model
 
-    backdoor_check = identify.check_backdoor_criterion(model, model.treatment, model.outcome, model.adjusted)
+    backdoor_check = identify.backdoor.check_backdoor_criterion(model, model.treatment, model.outcome, model.adjusted)
     st.write(f"all backdoor paths blocked: {backdoor_check}")
 
     elements, style, layout, ctx_menu = utils.get_cytoscape_params_from_model(model)
